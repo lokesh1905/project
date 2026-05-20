@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="aurora">
+<head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#3b63d9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Electric Shop — Rate Book (Pro)</title>
+  <link rel="manifest" href="manifest.json">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo" style="display: flex; align-items: center; gap: 10px;">
+    <button class="icon-btn" onclick="window.toggleSidebar?.()">☰</button>
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+    <div>Rate Book<span class="logo-sub" style="display:block;font-size:10px;font-weight:400;color:var(--muted);">Electric Shop</span></div>
+  </div>
+  
+  <div class="header-right">
+    <div class="autosave-indicator" id="autoSaveIndicator"><div class="dot"></div><span>Auto</span></div>
+    <div class="item-count" id="itemCount">0 Items</div>
+    <button class="icon-btn" id="syncBtn" onclick="window.gsReconcile?.()">⟳</button>
+    <button class="icon-btn" onclick="window.addNewTab?.()" title="New Tab">＋</button>
+  </div>
+</header>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="app-layout">
+  <nav class="sidebar" id="sidebarNav">
+    <div class="sidebar-item active" onclick="window.openPane?.('browse')">🔍 Find Items</div>
+    <div class="sidebar-item" onclick="window.openPane?.('add')">+ Add Item</div>
+    <div class="sidebar-item" onclick="window.openPane?.('quote')">📄 Quotation</div>
+    <div class="sidebar-item" onclick="window.openPane?.('settings')">⚙️ Settings</div>
+    <div class="sidebar-collapse-btn" onclick="window.toggleSidebarCollapse?.()">◀ Collapse</div>
+  </nav>
+
+  <div class="main-content">
+    <div class="chrome-tabs-bar" id="chromeTabsBar"></div>
+    <div class="tabs" id="mobileTabsBar">
+      <div class="tab active" onclick="window.switchTab?.('browse')">📦 Find</div>
+      <div class="tab" onclick="window.switchTab?.('add')">➕ Add</div>
+      <div class="tab" onclick="window.switchTab?.('quote')">📑 Quote</div>
+      <div class="tab" onclick="window.switchTab?.('settings')">⚙️</div>
+    </div>
+
+    <div class="panels-container" id="panelsContainer">
+      <!-- BROWSE PANE -->
+      <div class="panel-pane active" id="pane-browse">
+        <div class="panel active" id="tab-browse">
+          <div class="stats-bar" id="statsBar" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;"></div>
+          <div class="search-wrap">
+            <div class="search-field-wrap">
+              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" id="searchInput" placeholder="Search items, brands, categories…" autocomplete="off">
+              <button class="search-clear" id="searchClear" onclick="document.getElementById('searchInput').value=''; window.handleSearch?.(''); document.getElementById('searchClear').classList.remove('visible')">✕</button>
+            </div>
+            <div class="sort-pills">
+              <span class="sort-label">Sort</span>
+              <button class="sort-pill" id="sort-name" onclick="window.setSort?.('name')">A–Z</button>
+              <button class="sort-pill" id="sort-buy-asc" onclick="window.setSort?.('buy-asc')">Price ↑</button>
+              <button class="sort-pill active" id="sort-recent" onclick="window.setSort?.('recent')">Recent</button>
+            </div>
+          </div>
+          <div class="filter-row" id="filterChips"></div>
+          <div style="margin:12px 0 8px; display:flex; gap:8px;">
+            <button onclick="window.toggleSelectionMode?.()" id="selectModeBtn" style="padding:11px 18px; background:var(--accent-light); color:var(--accent); border:1.5px solid var(--accent); border-radius:8px; font-weight:600; font-size:13px;">✅ Select</button>
+            <button onclick="window.openBulkUpdate?.()" style="padding:11px 18px; background:var(--accent-light); color:var(--accent); border:1.5px solid var(--accent); border-radius:8px; font-weight:600; font-size:13px;">🔄 Bulk Update</button>
+          </div>
+          <div id="itemsList"></div>          
+        </div>
+      </div>
+
+      <!-- ADD PANE -->
+      <div class="panel-pane" id="pane-add">
+        <div class="panel" id="tab-add">
+          <div class="card">
+            <div class="section-label">New Item</div>
+            <div class="search-field-wrap" style="margin-bottom:10px; position:relative;">
+              <input type="text" id="addName" placeholder="Item name *" style="padding-right: 45px !important;">
+              <button class="search-clear" id="addNameClear" onclick="window.clearNameField?.()">✕</button>
+            </div>    
+            <input type="text" id="addBrand" placeholder="Brand" style="margin-bottom:10px">
+            <div class="form-2col">
+              <div>
+                <label>Buy Price (₹)</label>
+                <input type="number" id="addBuyPrice" oninput="window.checkSellWarn?.('add')">
+              </div>
+              <div>
+                <label>Sell Price (₹)</label>
+                <input type="number" id="addSellPrice" oninput="window.checkSellWarn?.('add')">
+              </div>
+            </div>
+            <div class="price-warning" id="addSellWarn">⚠️ Sell price lower than buy</div>
+            <input type="text" id="addUnit" placeholder="Unit (pc, mtr, box)" style="margin-bottom:10px">
+            <input type="text" id="addCat" placeholder="Category" style="margin-bottom:10px">
+            <input type="text" id="addDistributor" placeholder="Distributor" style="margin-bottom:10px">
+            <input type="text" id="addLocation" placeholder="Shop/Location" style="margin-bottom:10px">
+            <textarea id="addNote" placeholder="Notes / specs" rows="3" style="margin-bottom:14px; resize: vertical;"></textarea>
+          </div>
+          <div style="display: flex; gap: 12px; margin-top: 10px;">
+            <button class="save-btn" onclick="window.saveItem?.()" style="flex: 2;">💾 Save Item</button>
+            <button class="save-btn" onclick="window.clearAddForm?.()" style="flex: 1; background: var(--bg-elevated); color: var(--text2); border: 1.5px solid var(--border); box-shadow: none;">🗑️ Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUOTE PANE -->
+      <div class="panel-pane" id="pane-quote">
+        <div class="panel" id="tab-quote">
+          <div class="card">
+            <input type="text" id="quoteSearch" placeholder="Search items…" oninput="window.renderQuoteItems?.()">
+            <div id="quoteItemsList" style="margin-top:10px;"></div>
+          </div>
+          <div class="card">
+            <div id="quoteSummary" style="margin-bottom:14px;font-weight:600;"></div>
+            <button class="save-btn" onclick="window.shareQuote?.()">📤 Share Quote</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS PANE -->
+      <div class="panel-pane" id="pane-settings">
+        <div class="panel" id="tab-settings">
+          <div class="settings-sync-card">
+            <div class="sync-card-left">
+              <div class="sync-icon"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg></div>
+              <div><div class="sync-title">Google Sheets Sync</div><div class="sync-sub" id="gsheetsStatusSub">Always connected · auto-pull every 7s</div></div>
+            </div>
+            <button class="sync-btn" onclick="window.gsReconcile?.()"><svg viewBox="0 0 24 24" stroke-width="2.5"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>Sync Now</button>
+          </div>
+          <div class="settings-section">
+            <div class="settings-section-title"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>Data &amp; Backup</div>
+            <div class="settings-actions-grid">
+              <button class="settings-action-btn" onclick="window.exportData?.()"><span class="sab-icon">📥</span><span class="sab-label">Export JSON</span><span class="sab-desc">Full backup</span></button>
+              <button class="settings-action-btn" onclick="window.exportExcel?.()"><span class="sab-icon">📊</span><span class="sab-label">Export Excel</span><span class="sab-desc">.xlsx format</span></button>
+              <button class="settings-action-btn" onclick="document.getElementById('importFile').click()"><span class="sab-icon">📂</span><span class="sab-label">Import JSON</span><span class="sab-desc">Restore data</span></button>
+              <button class="settings-action-btn danger" onclick="window.clearAll?.()"><span class="sab-icon">🗑️</span><span class="sab-label">Clear All</span><span class="sab-desc">Wipe items</span></button>
+            </div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-section-title"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 10 10 0 000-20"/></svg>Appearance</div>
+            <div class="theme-options">
+              <button class="theme-opt" onclick="window.setTheme?.('slate')"><div class="theme-swatch slate-swatch"></div><span>Slate</span></button>
+              <button class="theme-opt" onclick="window.setTheme?.('aurora')"><div class="theme-swatch aurora-swatch"></div><span>Aurora</span></button>
+              <button class="theme-opt" onclick="window.setTheme?.('ember')"><div class="theme-swatch ember-swatch"></div><span>Ember</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="editModal" onclick="if(event.target===this)window.closeEdit?.()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">✏️ Edit Item</div>
+    <input id="editName" placeholder="Name *" style="margin-bottom:10px">
+    <input id="editBrand" placeholder="Brand" style="margin-bottom:10px">
+    <div class="form-2col">
+      <input type="number" id="editBuyPrice" placeholder="Buy price" oninput="window.checkSellWarn?.('edit')">
+      <input type="number" id="editSellPrice" placeholder="Sell price" oninput="window.checkSellWarn?.('edit')">
+    </div>
+    <div class="price-warning" id="editSellWarn">⚠️ Sell below buy</div>
+    <input id="editReason" placeholder="Reason for price change (optional)" style="margin-top:10px;margin-bottom:10px">
+    <input id="editUnit" placeholder="Unit" style="margin-bottom:10px">
+    <input id="editCat" placeholder="Category" style="margin-bottom:10px">
+    <input id="editDistributor" placeholder="Distributor" style="margin-bottom:10px">
+    <input id="editLocation" placeholder="Location" style="margin-bottom:10px">
+    <textarea id="editNote" placeholder="Notes" style="margin-bottom:14px"></textarea>
+    <button class="save-btn" onclick="event.stopPropagation();window.updateItem?.()">💾 Update Item</button>
+    <button class="save-btn" onclick="window.closeEdit?.()" style="margin-top:10px;background:var(--bg-elevated);color:var(--text2);box-shadow:none;border:1.5px solid var(--border);">✕ Cancel</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="detailModal" onclick="window.closeDetail?.()">
+  <div class="modal" id="detailContent"></div>
+</div>
+
+<div class="modal-overlay" id="bulkModal">
+  <div class="modal" style="max-width:720px; margin:20px;">
+    <div class="modal-title">🔄 Bulk Update</div>
+    <div style="margin-bottom:24px;">
+      <label style="font-weight:600; display:block; margin-bottom:8px;">Update Scope</label>
+      <select id="bulkScope" style="width:100%; padding:12px; border-radius:12px;">
+        <option value="selected">✅ Selected Items Only</option>
+        <option value="search">🔍 Current Search Results</option>
+        <option value="category">📁 All Items in Category</option>
+        <option value="distributor">🏭 All Items from Supplier</option>
+        <option value="all">📦 All Items</option>
+      </select>
+      <div id="bulkScopeExtra" style="margin-top:12px;"></div>
+    </div>
+    <div style="margin-bottom:24px;">
+      <label style="font-weight:600; display:block; margin-bottom:12px;">🧩 Fields to Update</label>
+      <div class="fields-grid">
+        <label class="field-option"><input type="checkbox" id="updateBuy" checked> <span>💰 Buy Price</span></label>
+        <label class="field-option"><input type="checkbox" id="updateSell" checked> <span>💸 Sell Price</span></label>
+        <label class="field-option"><input type="checkbox" id="updateCat"> <span>📁 Category</span></label>
+        <label class="field-option"><input type="checkbox" id="updateBrand"> <span>🏷️ Brand</span></label>
+        <label class="field-option"><input type="checkbox" id="updateDist"> <span>🏭 Distributor</span></label>
+        <label class="field-option"><input type="checkbox" id="updateUnit"> <span>📏 Unit</span></label>
+        <label class="field-option"><input type="checkbox" id="updateLoc"> <span>📍 Location</span></label>
+        <label class="field-option"><input type="checkbox" id="updateNote"> <span>📝 Note</span></label>
+      </div>
+    </div>
+    <div class="bulk-two-columns" style="display:flex; gap:20px; margin-bottom:24px; flex-wrap:wrap;">
+      <div id="bulkPriceSection" style="flex:1; background:var(--bg-elevated); padding:16px; border-radius:16px; min-width:200px;">
+        <label style="font-weight:600; display:block; margin-bottom:12px;">💰 Price Adjustment</label>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <select id="bulkOperation" style="flex:2; padding:12px; border-radius:10px;">
+            <option value="set">Set To</option>
+            <option value="increase">Increase by (₹)</option>
+            <option value="decrease">Decrease by (₹)</option>
+            <option value="percent_up">Increase by (%)</option>
+            <option value="percent_down">Decrease by (%)</option>
+          </select>
+          <input type="number" id="bulkValue" placeholder="Value" step="0.01" style="flex:2; padding:12px; border-radius:10px;">
+          <span id="unitLabel" style="font-weight:600; padding:12px 0;">₹</span>
+        </div>
+      </div>
+      <div id="bulkTextSection" style="flex:1; background:var(--bg-elevated); padding:16px; border-radius:16px; min-width:240px; display:none;">
+        <label style="font-weight:600; display:block; margin-bottom:12px;">✏️ Text Field Values</label>
+        <div id="bulkTextInputsContainer" style="display:flex; flex-direction:column; gap:14px;"></div>
+      </div>
+    </div>
+    <div id="bulkPreview" style="padding:14px; background:var(--accent-light); border-radius:14px; font-size:13px; margin-bottom:20px; border:1px solid var(--accent-glow);"></div>
+    <div style="display:flex; gap:12px;">
+      <button class="save-btn" onclick="window.applyBulkUpdate?.()" style="flex:1;">✅ Apply to <span id="bulkCount">0</span> items</button>
+      <button class="save-btn" onclick="window.closeBulkModal?.()" style="flex:1; background:var(--bg-elevated); color:var(--text2); border:1.5px solid var(--border);">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="window.importData?.(event)">
+
+<script src="js/utils.js"></script>
+<script src="js/db.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/crud.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/tabs.js"></script>
+<script src="js/quote.js"></script>
+<script src="js/bulk.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
